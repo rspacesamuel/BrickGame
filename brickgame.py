@@ -1,3 +1,4 @@
+#under construction !
 import pygame, sys, itertools
 from pygame.locals import *
 
