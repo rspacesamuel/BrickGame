@@ -1,4 +1,3 @@
-#under construction !
 import pygame, sys, itertools
 from pygame.locals import *
 
@@ -94,9 +93,6 @@ def main():
                     BOARD[row][nextCol].drawLSBrick()
                     BOARD[row][nextCol]._nextActiveBrick = True
                     
-                
-                
-            
  
     BOARD = [[Brick(*Brick.calculateTopLeftXY(blocksAcross)) for blocksAcross in range(BLOCKS_ACROSS)] for _ in range(BLOCKS_DOWN)]
 
@@ -104,6 +100,7 @@ def main():
         BOARD[i][int(BLOCKS_ACROSS/2)].drawLSBrick()
        
     while True:
+        lastKeyPressed = -1
         if CURR_BRICK_SETTLED == True:
             break
         else:
@@ -123,6 +120,7 @@ def main():
                                     
 
                     elif event.key == K_RIGHT:
+                        lastKeyPressed = K_RIGHT
                         for row, rowBrick in enumerate(BOARD):
                             for column, brick in enumerate(rowBrick):
                                 if brick._currentActiveBrick == True:
@@ -130,15 +128,18 @@ def main():
                                         brick.shiftBrick(row,column,"RIGHT")
                                         if row == BLOCKS_DOWN - 1:
                                             CURR_BRICK_SETTLED = True
-                                    
 
-            for row, rowBrick in enumerate(BOARD):
-                for column, brick in enumerate(rowBrick):
-                    if brick._currentActiveBrick == True and row < BLOCKS_DOWN-1:
-                        nextRow = row + 1
-                        BOARD[nextRow][column]._nextActiveBrick = True
-                    elif brick._currentActiveBrick == True and row == BLOCKS_DOWN-1:
-                        CURR_BRICK_SETTLED = True
+            #When right-arrow is pressed, shiftBrick() will set _nextActiveBrick=True for the trailing Brick that's supposed be erased.
+            #This means that when the brick moves down, the trailing end of brick will inadvertently grow towards the top of the screen.
+            #It is to avoid this situation, we use the below check for lastKeyPressed!=K_RIGHT
+            if lastKeyPressed !=K_RIGHT:         
+                for row, rowBrick in enumerate(BOARD):
+                    for column, brick in enumerate(rowBrick):
+                        if brick._currentActiveBrick == True and row < BLOCKS_DOWN-1:
+                            nextRow = row + 1
+                            BOARD[nextRow][column]._nextActiveBrick = True
+                        elif brick._currentActiveBrick == True and row == BLOCKS_DOWN-1:
+                            CURR_BRICK_SETTLED = True
 
             #Move brick down if it hasn't reached bottom (default brick movement with no key input)
             if CURR_BRICK_SETTLED == False:
@@ -148,7 +149,7 @@ def main():
                         #move brick down
                         if brick._nextActiveBrick == True:
                             brick.drawLSBrick()
-
+                            
                         #and erase the tail
                         elif brick._currentActiveBrick == True:
                             #below statements belong to __init__ but we aren't calling __init__ to avoid re-initializing topX,topY
@@ -156,8 +157,8 @@ def main():
                             pygame.draw.rect(gameSurface, GAME_BKGRND_COLOR, (brick._brickTopLeftX,brick._brickTopLeftY,brick.brickWidth,brick.brickHeight), 0)
                             pygame.draw.rect(gameSurface, Brick.brickBorderColor, (brick._brickTopLeftX,brick._brickTopLeftY,brick.brickWidth,brick.brickHeight), 1)
 
-            pygame.time.wait(500)
             pygame.display.update()
-            
+            pygame.time.wait(500)
+                        
 if __name__ == '__main__':
     main()
