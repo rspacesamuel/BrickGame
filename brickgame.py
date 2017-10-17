@@ -44,6 +44,7 @@ def main():
             self._brickTopLeftY = topLeftY
             self._currentActiveBrick = False
             self._nextActiveBrick = False
+            self._brickSettled = False
             #draw background wall (the board)
             pygame.draw.rect(gameSurface, GAME_BKGRND_COLOR, (self._brickTopLeftX,self._brickTopLeftY,self.brickWidth,self.brickHeight), 0)
             pygame.draw.rect(gameSurface, Brick.brickBorderColor, (self._brickTopLeftX,self._brickTopLeftY,self.brickWidth,self.brickHeight), 1)
@@ -129,9 +130,13 @@ def main():
                                         if row == BLOCKS_DOWN - 1:
                                             CURR_BRICK_SETTLED = True
 
+                    elif event.key == K_DOWN:
+                        lastKeyPressed = K_DOWN
+
             #When right-arrow is pressed, shiftBrick() will set _nextActiveBrick=True for the trailing Brick that's supposed be erased.
             #This means that when the brick moves down, the trailing end of brick will inadvertently grow towards the top of the screen.
             #It is to avoid this situation, we use the below check for lastKeyPressed!=K_RIGHT
+            #Make next brick below active, so it moves down:
             if lastKeyPressed !=K_RIGHT:         
                 for row, rowBrick in enumerate(BOARD):
                     for column, brick in enumerate(rowBrick):
@@ -141,7 +146,7 @@ def main():
                         elif brick._currentActiveBrick == True and row == BLOCKS_DOWN-1:
                             CURR_BRICK_SETTLED = True
 
-            #Move brick down if it hasn't reached bottom (default brick movement with no key input)
+            #Move brick down if it hasn't reached bottom (default downward brick movement with no key input)
             if CURR_BRICK_SETTLED == False:
                 for row, rowBrick in enumerate(BOARD):
                     for column, brick in enumerate(rowBrick):
@@ -157,8 +162,20 @@ def main():
                             pygame.draw.rect(gameSurface, GAME_BKGRND_COLOR, (brick._brickTopLeftX,brick._brickTopLeftY,brick.brickWidth,brick.brickHeight), 0)
                             pygame.draw.rect(gameSurface, Brick.brickBorderColor, (brick._brickTopLeftX,brick._brickTopLeftY,brick.brickWidth,brick.brickHeight), 1)
 
+            #Brick has settled down. Mark it as settled.
+            else:
+                for row, rowBrick in enumerate(BOARD):
+                    for column, brick in enumerate(rowBrick):
+                        if brick._currentActiveBrick == True:
+                            brick._currentActiveBrick = False
+                            brick._brickSettled = True
+
             pygame.display.update()
-            pygame.time.wait(500)
+
+            if lastKeyPressed == K_DOWN:
+                pygame.time.wait(250)
+            else:
+                pygame.time.wait(500)
                         
 if __name__ == '__main__':
     main()
