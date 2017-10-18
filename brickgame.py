@@ -122,8 +122,8 @@ def main():
             
         else:
             #Run through all bricks.
-            #Reset bricks from "currently moving ACROSS" because at this point no brick should be moving ACROSS.
-            #Don't move ACROSS if there's an already settled brick right ahead below.
+            #1. Reset bricks from "currently moving ACROSS" because at this point no brick should be moving ACROSS.
+            #2. If there are already settled bricks on either sides of the moving brick, it can't move any further ACROSS.
             for row, rowBrick in enumerate(BOARD):
                 for column, brick in enumerate(rowBrick):
                     brick._currentlyMovingAcross = False
@@ -166,11 +166,7 @@ def main():
                     elif event.key == K_DOWN:
                         lastKeyPressed = K_DOWN
 
-            #When right-arrow is pressed, shiftBrick() will set _nextActiveBrick=True for the trailing Brick that's supposed be erased.
-            #This means that as the brick moves down, the trailing end of brick will inadvertently grow towards the top of the screen with
-            #each press of the right arrow key. It is to avoid this situation, we use the below check for lastKeyPressed!=K_RIGHT.
             #Make next brick below active, so it moves down:
-            #if lastKeyPressed !=K_RIGHT:         
             for row, rowBrick in enumerate(BOARD):
                 for column, brick in enumerate(rowBrick):
                     brick._bottomRow = False
@@ -226,3 +222,4 @@ def main():
                         
 if __name__ == '__main__':
     main()
+
