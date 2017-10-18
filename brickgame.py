@@ -1,3 +1,5 @@
+#UNDER CONSTRUCTION. TREAD LIGHTLY.
+
 import pygame, sys, itertools
 from pygame.locals import *
 
@@ -23,12 +25,16 @@ BLOCKS_DOWN = 16
 END_OF_ROW = False
 TOP_LEFT_X = INNER_WINDOW_TOPX-25
 TOP_LEFT_Y = INNER_WINDOW_TOPY
-CURR_BRICK_SETTLED = False
+CURR_BRICK_SETTLED = True
 
 
         
 def main():
     global BOARD, CURR_BRICK_SETTLED, BLOCKS_ACROSS, BLOCKS_DOWN
+    bottomRow = -1
+    bottomColumn = -1
+    dontMoveLeft = False
+    dontMoveRight = False
     gameSurface = pygame.display.set_mode((WINDOW_WIDTH,WINDOW_HEIGHT))
     pygame.display.set_caption("Place the bricks")
     gameSurface.fill(GAME_BKGRND_COLOR)
@@ -39,12 +45,16 @@ def main():
         brickWidth = 25
         brickHeight = 25
         
-        def __init__(self, topLeftX, topLeftY):
+        def __init__(self, topLeftX, topLeftY, brickRow, brickCol):
             self._brickTopLeftX = topLeftX
             self._brickTopLeftY = topLeftY
+            self._brickRow = brickRow
+            self._brickColumn = brickCol
             self._currentActiveBrick = False
             self._nextActiveBrick = False
             self._brickSettled = False
+            self._bottomRow = False
+            self._currentlyMovingAcross = False
             #draw background wall (the board)
             pygame.draw.rect(gameSurface, GAME_BKGRND_COLOR, (self._brickTopLeftX,self._brickTopLeftY,self.brickWidth,self.brickHeight), 0)
             pygame.draw.rect(gameSurface, Brick.brickBorderColor, (self._brickTopLeftX,self._brickTopLeftY,self.brickWidth,self.brickHeight), 1)
@@ -70,87 +80,120 @@ def main():
             pygame.draw.rect(gameSurface, lsBrickColor, (self._brickTopLeftX,self._brickTopLeftY,Brick.brickWidth,Brick.brickHeight),0)
             pygame.draw.rect(gameSurface, lsBrickBorderColor, (self._brickTopLeftX,self._brickTopLeftY,Brick.brickWidth,Brick.brickHeight),1)
 
-        def shiftBrick(self,row,col,direction):
+        def shiftBrick(self,direction):
             global BOARD, BLOCKS_ACROSS
             if direction == "LEFT":
-                if col > 0:
+                if self._brickColumn > 0:
                     #reset current brick to Board defaults
                     self._currentActiveBrick = False
                     pygame.draw.rect(gameSurface, GAME_BKGRND_COLOR, (brick._brickTopLeftX,brick._brickTopLeftY,brick.brickWidth,brick.brickHeight), 0)
                     pygame.draw.rect(gameSurface, Brick.brickBorderColor, (brick._brickTopLeftX,brick._brickTopLeftY,brick.brickWidth,brick.brickHeight), 1)
                     #move current brick to the left
-                    nextCol = col - 1
-                    BOARD[row][nextCol].drawLSBrick()
-
+                    nextCol = self._brickColumn - 1
+                    BOARD[self._brickRow][nextCol].drawLSBrick()
+                    
             if direction == "RIGHT":
-                if col <= BLOCKS_ACROSS - 1:
+                if self._brickColumn < BLOCKS_ACROSS - 1:
                     #reset current brick to Board defaults
                     self._currentActiveBrick = False
                     self._nextActiveBrick = False
                     pygame.draw.rect(gameSurface, GAME_BKGRND_COLOR, (brick._brickTopLeftX,brick._brickTopLeftY,brick.brickWidth,brick.brickHeight), 0)
                     pygame.draw.rect(gameSurface, Brick.brickBorderColor, (brick._brickTopLeftX,brick._brickTopLeftY,brick.brickWidth,brick.brickHeight), 1)
-                    #move current brick to the left
-                    nextCol = col + 1
-                    BOARD[row][nextCol].drawLSBrick()
-                    BOARD[row][nextCol]._nextActiveBrick = True
+                    #move current brick to the right
+                    nextCol = self._brickColumn + 1
+                    BOARD[self._brickRow][nextCol].drawLSBrick()
+                    BOARD[self._brickRow][nextCol]._currentActiveBrick = True
+                    BOARD[self._brickRow][nextCol]._currentlyMovingAcross = True
                     
- 
-    BOARD = [[Brick(*Brick.calculateTopLeftXY(blocksAcross)) for blocksAcross in range(BLOCKS_ACROSS)] for _ in range(BLOCKS_DOWN)]
+                                        
+    BOARD = [[Brick(*Brick.calculateTopLeftXY(blocksAcross),blocksDown, blocksAcross) for blocksAcross in range(BLOCKS_ACROSS)] for blocksDown in range(BLOCKS_DOWN)]
 
-    for i in range(4):
-        BOARD[i][int(BLOCKS_ACROSS/2)].drawLSBrick()
-       
+     
     while True:
         lastKeyPressed = -1
         if CURR_BRICK_SETTLED == True:
-            break
+            for i in range(4):
+                BOARD[i][int(BLOCKS_ACROSS/2)].drawLSBrick()
+                bottomRow = i
+            BOARD[bottomRow][int(BLOCKS_ACROSS/2)]._bottomRow = True
+            CURR_BRICK_SETTLED = False
+            dontMoveLeft = False
+            dontMoveRight = False
+            
         else:
+            #Run through all bricks.
+            #Reset bricks from "currently moving ACROSS" because at this point no brick should be moving ACROSS.
+            #Don't move ACROSS if there's an already settled brick right ahead below.
+            for row, rowBrick in enumerate(BOARD):
+                for column, brick in enumerate(rowBrick):
+                    brick._currentlyMovingAcross = False
+                    if brick._bottomRow == True:
+                        if column > 0 and row < BLOCKS_DOWN-1:
+                            if BOARD[row+1][column-1]._brickSettled == True:
+                                dontMoveLeft = True
+                        if column < BLOCKS_ACROSS-1 and row < BLOCKS_DOWN-1:
+                            if BOARD[row+1][column+1]._brickSettled == True:
+                                dontMoveRight = True
+                                
             for event in pygame.event.get():
                 if event.type == QUIT:
                     pygame.quit()
                     sys.exit()
 
-                elif event.type == KEYUP:
+                elif event.type == KEYDOWN:
                     if event.key == K_LEFT:
-                        for row, rowBrick in enumerate(BOARD):
-                            for column, brick in enumerate(rowBrick):
-                                if brick._currentActiveBrick == True:
-                                    brick.shiftBrick(row,column,"LEFT")
-                                    if row == BLOCKS_DOWN - 1:
-                                        CURR_BRICK_SETTLED = True
-                                    
+                        if dontMoveLeft == False:
+                            for row, rowBrick in enumerate(BOARD):
+                                for column, brick in enumerate(rowBrick):
+                                    if brick._currentActiveBrick == True and brick._brickSettled == False:
+                                        brick.shiftBrick("LEFT")
+                                        if row == BLOCKS_DOWN - 1:
+                                            CURR_BRICK_SETTLED = True
+                                        
 
                     elif event.key == K_RIGHT:
                         lastKeyPressed = K_RIGHT
-                        for row, rowBrick in enumerate(BOARD):
-                            for column, brick in enumerate(rowBrick):
-                                if brick._currentActiveBrick == True:
-                                    if brick._nextActiveBrick == False:
-                                        brick.shiftBrick(row,column,"RIGHT")
-                                        if row == BLOCKS_DOWN - 1:
-                                            CURR_BRICK_SETTLED = True
+                        if dontMoveRight == False:
+                            for row, rowBrick in enumerate(BOARD):
+                                for column, brick in enumerate(rowBrick):
+                                    brick._bottomRow = False
+                                    if brick._currentActiveBrick == True and brick._brickSettled == False:
+                                        if brick._currentlyMovingAcross == False:
+                                            brick.shiftBrick("RIGHT")
+                                            if row == BLOCKS_DOWN - 1:
+                                                CURR_BRICK_SETTLED = True
 
                     elif event.key == K_DOWN:
                         lastKeyPressed = K_DOWN
 
             #When right-arrow is pressed, shiftBrick() will set _nextActiveBrick=True for the trailing Brick that's supposed be erased.
-            #This means that when the brick moves down, the trailing end of brick will inadvertently grow towards the top of the screen.
-            #It is to avoid this situation, we use the below check for lastKeyPressed!=K_RIGHT
+            #This means that as the brick moves down, the trailing end of brick will inadvertently grow towards the top of the screen with
+            #each press of the right arrow key. It is to avoid this situation, we use the below check for lastKeyPressed!=K_RIGHT.
             #Make next brick below active, so it moves down:
-            if lastKeyPressed !=K_RIGHT:         
-                for row, rowBrick in enumerate(BOARD):
-                    for column, brick in enumerate(rowBrick):
-                        if brick._currentActiveBrick == True and row < BLOCKS_DOWN-1:
-                            nextRow = row + 1
-                            BOARD[nextRow][column]._nextActiveBrick = True
-                        elif brick._currentActiveBrick == True and row == BLOCKS_DOWN-1:
-                            CURR_BRICK_SETTLED = True
+            #if lastKeyPressed !=K_RIGHT:         
+            for row, rowBrick in enumerate(BOARD):
+                for column, brick in enumerate(rowBrick):
+                    brick._bottomRow = False
+                    if brick._currentActiveBrick == True and row < BLOCKS_DOWN-1:
+                        nextRow = row + 1
+                        BOARD[nextRow][column]._nextActiveBrick = True
+                        bottomRow = nextRow
+                        bottomColumn = column
+                    elif brick._currentActiveBrick == True and row == BLOCKS_DOWN-1:
+                        CURR_BRICK_SETTLED = True
+            BOARD[bottomRow][bottomColumn]._bottomRow = True
+                  
 
             #Move brick down if it hasn't reached bottom (default downward brick movement with no key input)
             if CURR_BRICK_SETTLED == False:
                 for row, rowBrick in enumerate(BOARD):
                     for column, brick in enumerate(rowBrick):
-                          
+
+                        #Is the brick going to land on top of an already settled brick?
+                        if brick._bottomRow == True and row < BLOCKS_DOWN-1:
+                            if BOARD[row+1][column]._brickSettled == True:
+                                    CURR_BRICK_SETTLED = True
+                                                    
                         #move brick down
                         if brick._nextActiveBrick == True:
                             brick.drawLSBrick()
@@ -160,20 +203,24 @@ def main():
                             #below statements belong to __init__ but we aren't calling __init__ to avoid re-initializing topX,topY
                             brick._currentActiveBrick = False
                             pygame.draw.rect(gameSurface, GAME_BKGRND_COLOR, (brick._brickTopLeftX,brick._brickTopLeftY,brick.brickWidth,brick.brickHeight), 0)
-                            pygame.draw.rect(gameSurface, Brick.brickBorderColor, (brick._brickTopLeftX,brick._brickTopLeftY,brick.brickWidth,brick.brickHeight), 1)
+                            pygame.draw.rect(gameSurface, Brick.brickBorderColor, (brick._brickTopLeftX,brick._brickTopLeftY,brick.brickWidth,brick.brickHeight), 1) 
 
             #Brick has settled down. Mark it as settled.
-            else:
+            if CURR_BRICK_SETTLED == True:
                 for row, rowBrick in enumerate(BOARD):
                     for column, brick in enumerate(rowBrick):
                         if brick._currentActiveBrick == True:
                             brick._currentActiveBrick = False
+                            brick._nextActiveBrick = False
+                            brick._bottomRow = False
+                            brick._currentlyMovingAcross = False
                             brick._brickSettled = True
+                
 
             pygame.display.update()
 
             if lastKeyPressed == K_DOWN:
-                pygame.time.wait(250)
+                pygame.time.wait(200)
             else:
                 pygame.time.wait(500)
                         
