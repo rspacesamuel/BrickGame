@@ -123,7 +123,7 @@ def main():
         else:
             #Run through all bricks.
             #1. Reset bricks from "currently moving ACROSS" because at this point no brick should be moving ACROSS.
-            #2. If there are already settled bricks on either sides of the moving brick, it can't move any further ACROSS.
+            #2. If there are already settled bricks on either sides of the moving brick, it shouldn't move any further ACROSS.
             for row, rowBrick in enumerate(BOARD):
                 for column, brick in enumerate(rowBrick):
                     brick._currentlyMovingAcross = False
@@ -135,6 +135,7 @@ def main():
                             if BOARD[row+1][column+1]._brickSettled == True:
                                 dontMoveRight = True
                                 
+            #Input events: capture arrow keys or window X button                    
             for event in pygame.event.get():
                 if event.type == QUIT:
                     pygame.quit()
@@ -143,6 +144,7 @@ def main():
                 elif event.type == KEYDOWN:
                     if event.key == K_LEFT:
                         if dontMoveLeft == False:
+                            #shift moving brick to the left
                             for row, rowBrick in enumerate(BOARD):
                                 for column, brick in enumerate(rowBrick):
                                     if brick._currentActiveBrick == True and brick._brickSettled == False:
@@ -154,6 +156,7 @@ def main():
                     elif event.key == K_RIGHT:
                         lastKeyPressed = K_RIGHT
                         if dontMoveRight == False:
+                            #shift moving brick to the right
                             for row, rowBrick in enumerate(BOARD):
                                 for column, brick in enumerate(rowBrick):
                                     brick._bottomRow = False
@@ -164,6 +167,7 @@ def main():
                                                 CURR_BRICK_SETTLED = True
 
                     elif event.key == K_DOWN:
+                        #this key event is captured to refresh display faster (lower wait time) so it leads the player to think brick is moving down faster
                         lastKeyPressed = K_DOWN
 
             #Make next brick below active, so it moves down:
